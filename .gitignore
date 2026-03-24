@@ -1,0 +1,25 @@
+# Local dev context
+CLAUDE.md
+
+# Build output
+bin/
+dist/
+*.exe
+
+# Generated protobuf
+*.pb.go
+
+# Environment
+.env
+
+# macOS
+.DS_Store
+
+# Vendor (not vendoring)
+vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
