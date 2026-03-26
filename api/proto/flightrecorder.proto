@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package flightrecorder;
+
+option go_package = "github.com/ryanhamby/gpu-flight-recorder/api/proto";
+
+// EventStream service — agents stream events to the coordinator.
+service EventStream {
+  // StreamEvents is a client-streaming RPC. The agent opens a stream and
+  // continuously sends events to the coordinator.
+  rpc StreamEvents(stream EventMessage) returns (StreamAck);
+}
+
+// AnomalyReport service — clients query the coordinator for reports.
+service AnomalyReport {
+  // GetReport returns the latest anomaly report for the given time window.
+  rpc GetReport(ReportRequest) returns (ReportResponse);
+}
+
+// EventMessage wraps all event types in a oneof for transmission.
+message EventMessage {
+  int64 timestamp_ns = 1;
+  uint32 rank = 2;
+  string node_id = 3;
+
+  oneof event {
+    GPUMetric gpu_metric = 10;
+    NCCLCollective nccl_collective = 11;
+    PCIeBandwidth pcie_bandwidth = 12;
+    NVLink nvlink = 13;
+    Thermal thermal = 14;
+  }
+}
+
+message GPUMetric {
+  double temperature_c = 1;
+  double power_watts = 2;
+  double utilization_pct = 3;
+  double mem_bandwidth_pct = 4;
+  uint64 ecc_errors_sbe = 5;
+  uint64 ecc_errors_dbe = 6;
+}
+
+message NCCLCollective {
+  string op_type = 1;
+  uint64 data_size = 2;
+  int64 duration_ns = 3;
+  string algorithm = 4;
+}
+
+message PCIeBandwidth {
+  double read_bw_mbs = 1;
+  double write_bw_mbs = 2;
+}
+
+message NVLink {
+  uint32 link_id = 1;
+  double throughput_gbs = 2;
+}
+
+message Thermal {
+  double temperature_c = 1;
+  bool throttle_active = 2;
+}
+
+message StreamAck {
+  uint64 events_received = 1;
+}
+
+message ReportRequest {
+  // How far back to look for anomalies (nanoseconds).
+  int64 window_ns = 1;
+}
+
+message ReportResponse {
+  repeated AnomalyDetail anomalies = 1;
+}
+
+message AnomalyDetail {
+  int64 detected_at_ns = 1;
+  uint32 straggler_rank = 2;
+  string op_type = 3;
+  int64 expected_duration_ns = 4;
+  int64 actual_duration_ns = 5;
+  double deviation_sigma = 6;
+  string attribution_summary = 7;
+  repeated CausalLink causal_chain = 8;
+}
+
+message CausalLink {
+  string cause = 1;
+  double confidence = 2;
+  string detail = 3;
+}
