@@ -1,0 +1,56 @@
+version: "3.8"
+
+services:
+  coordinator:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["coordinator", "--listen", ":50051", "--threshold-sigma", "2.0"]
+    ports:
+      - "50051:50051"
+    networks:
+      - gfr
+
+  agent-0:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-0"]
+    depends_on:
+      - coordinator
+    networks:
+      - gfr
+
+  agent-1:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-1"]
+    depends_on:
+      - coordinator
+    networks:
+      - gfr
+
+  agent-2:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-2"]
+    depends_on:
+      - coordinator
+    networks:
+      - gfr
+
+  agent-3:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-3"]
+    depends_on:
+      - coordinator
+    networks:
+      - gfr
+
+networks:
+  gfr:
+    driver: bridge
