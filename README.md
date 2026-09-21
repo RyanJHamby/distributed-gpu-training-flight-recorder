@@ -47,6 +47,10 @@ wait "${pids[@]}"                             # agents exit when their replay en
 ./bin/gfr report --coordinator localhost:50051
 kill %1                                       # stop the coordinator
 
+# Mutual TLS: coordinator requires agent certificates signed by your CA
+./bin/gfr coordinator --tls-cert server.crt --tls-key server.key --tls-client-ca ca.pem
+./bin/gfr agent --tls-ca ca.pem --tls-cert agent.crt --tls-key agent.key --tail '/var/run/gfr/rank*.jsonl'
+
 make sim      # regenerate the scorecard (docs/scorecard.md)
 make traces   # write one synthetic trace per fault type into ./traces
 docker compose -f deploy/docker-compose.yaml up -d   # same demo, containerized; then: gfr report
@@ -148,7 +152,7 @@ internal/
   correlator/        (pg, seq) grouping, MAD stats, block-median straggler detection
   attribution/       rule-based causal chain with confidence and ruled-out list
   coordinator/       correlator -> attribution pipeline; live (streaming) and offline
-  transport/         gRPC server/client, proto <-> domain conversion
+  transport/         gRPC server/client, mTLS credentials, proto <-> domain conversion
   agent/             collector fan-in, ring buffer, forwarding
   collector/         replay (JSONL trace) and tail (follow shim output) collectors
   trace/             JSONL trace format
@@ -168,6 +172,7 @@ docs/                design.md (rationale), scorecard.md (generated)
 - **Fuzzing** of correlator ingest and detection against out-of-order, duplicate and partial events.
 - **Bug-driven regression tests.** Several came from failures the simulator exposed: a straggler contaminating its own baseline at 2 ranks; persistence diluted by a healthy prefix; a recovered fault being dropped.
 - **Cross-language contract test:** a fixture written by the Python shim must decode in Go, so field-name or unit drift fails CI.
+- **mTLS:** in-test CAs prove a valid client is accepted and a rogue-CA client, a plaintext client, and a client facing an untrusted server are each refused at the handshake.
 - **End to end:** 8 agents stream to one coordinator over gRPC and the report is checked; a multi-process run of the real binaries is in the quickstart.
 - **Scorecard as a regression floor:** `internal/sim` fails if detection or attribution drops.
 
@@ -176,14 +181,14 @@ docs/                design.md (rationale), scorecard.md (generated)
 - No real-hardware validation yet (see Status).
 - Detection needs at least two blocks (60 collectives) of history and a persistent fault; onset is located to about one block. Single slow steps are ignored on purpose.
 - Attribution is per-GPU. It cannot see fabric faults, and it can only explain GPU sharing when NVML exposes the process list.
-- The gRPC channel is plaintext (development only); no auth or TLS yet.
+- mTLS is supported and tested but optional: without the TLS flags the channel is plaintext (with a logged warning). No certificate rotation or per-agent authorization beyond "signed by the CA".
 - The coordinator holds events in memory (bounded, oldest dropped) and is single-instance.
 
 ## Roadmap
 
 1. Real-GPU smoke session: confirm the flight-recorder schema, fix the shim, publish a first hardware scorecard.
 2. Confirm on real hardware that NVML process counts are visible in the target container setups.
-3. TLS/mTLS on the agent-coordinator channel; overlapping blocks for finer onset.
+3. Overlapping blocks for finer onset; certificate rotation.
 4. Overhead measurement (step time with and without the recorder).
 
 ## Development

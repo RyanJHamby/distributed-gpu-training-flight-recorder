@@ -46,6 +46,7 @@ func agentCmd() *cobra.Command {
 		replayFile      string
 		tailGlob        string
 		replayRanks     []int
+		tlsf            tlsFlags
 	)
 
 	cmd := &cobra.Command{
@@ -84,7 +85,7 @@ func agentCmd() *cobra.Command {
 				a.AddCollector(collector.NewTailCollector(tailGlob, cfg.PollInterval))
 			}
 			if cfg.CoordinatorAddress != "" {
-				cl, err := transport.NewClient(ctx, cfg.CoordinatorAddress)
+				cl, err := tlsf.client(ctx, cfg.CoordinatorAddress)
 				if err != nil {
 					return fmt.Errorf("connecting to coordinator: %w", err)
 				}
@@ -99,6 +100,7 @@ func agentCmd() *cobra.Command {
 	cmd.Flags().StringVar(&nodeID, "node-id", "", "Unique node identifier")
 	cmd.Flags().IntVar(&pollIntervalMs, "poll-interval-ms", 100, "Metric poll interval in milliseconds")
 	cmd.Flags().IntVar(&bufferSize, "buffer-size", 1<<20, "Ring buffer capacity (events)")
+	tlsf.register(cmd)
 	cmd.Flags().StringVar(&replayFile, "replay", "", "Replay a JSONL trace instead of live collectors")
 	cmd.Flags().StringVar(&tailGlob, "tail", "", "Follow JSONL files matching this glob (written by shim/gfr_torch.py)")
 	cmd.Flags().IntSliceVar(&replayRanks, "ranks", nil, "With --replay: only emit these ranks")
@@ -110,6 +112,9 @@ func coordinatorCmd() *cobra.Command {
 	var (
 		listenAddr     string
 		thresholdSigma float64
+		tlsCert        string
+		tlsKey         string
+		tlsClientCA    string
 	)
 
 	cmd := &cobra.Command{
@@ -120,7 +125,17 @@ func coordinatorCmd() *cobra.Command {
 			defer cancel()
 
 			live := coordinator.NewLive(coordinator.Options{ThresholdSigma: thresholdSigma}, 0)
-			srv := transport.NewServer(listenAddr, live)
+			var srv *transport.Server
+			if tlsCert != "" || tlsKey != "" || tlsClientCA != "" {
+				creds, err := transport.ServerCredentials(tlsCert, tlsKey, tlsClientCA)
+				if err != nil {
+					return fmt.Errorf("tls: %w", err)
+				}
+				srv = transport.NewServer(listenAddr, live, creds)
+			} else {
+				log.Println("warning: serving without TLS (development only)")
+				srv = transport.NewServer(listenAddr, live)
+			}
 			if err := srv.Listen(); err != nil {
 				return err
 			}
@@ -134,6 +149,9 @@ func coordinatorCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&listenAddr, "listen", ":50051", "gRPC listen address")
+	cmd.Flags().StringVar(&tlsCert, "tls-cert", "", "Server certificate (enables mTLS)")
+	cmd.Flags().StringVar(&tlsKey, "tls-key", "", "Server private key")
+	cmd.Flags().StringVar(&tlsClientCA, "tls-client-ca", "", "CA bundle that agent certificates must chain to (required with TLS)")
 	cmd.Flags().Float64Var(&thresholdSigma, "threshold-sigma", 4.0, "Block-median z threshold")
 
 	return cmd
@@ -181,13 +199,14 @@ func replayCmd() *cobra.Command {
 
 func reportCmd() *cobra.Command {
 	var addr string
+	var tlsf tlsFlags
 	cmd := &cobra.Command{
 		Use:   "report",
 		Short: "Query a running coordinator for current anomalies",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithTimeout(cmd.Context(), 30*time.Second)
 			defer cancel()
-			cl, err := transport.NewClient(ctx, addr)
+			cl, err := tlsf.client(ctx, addr)
 			if err != nil {
 				return err
 			}
@@ -204,5 +223,33 @@ func reportCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&addr, "coordinator", "localhost:50051", "Coordinator gRPC address")
+	tlsf.register(cmd)
 	return cmd
+}
+
+// tlsFlags are the shared client-side mTLS flags for agent and report.
+type tlsFlags struct{ ca, cert, key, serverName string }
+
+func (t *tlsFlags) register(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&t.ca, "tls-ca", "", "CA bundle to verify the coordinator (enables mTLS)")
+	cmd.Flags().StringVar(&t.cert, "tls-cert", "", "Client certificate (mTLS)")
+	cmd.Flags().StringVar(&t.key, "tls-key", "", "Client private key (mTLS)")
+	cmd.Flags().StringVar(&t.serverName, "tls-server-name", "", "Override the name checked on the coordinator certificate")
+}
+
+// client dials the coordinator: plaintext when no TLS flag is set, mutual TLS
+// when all of ca/cert/key are, and an error for a partial configuration.
+func (t *tlsFlags) client(ctx context.Context, addr string) (*transport.Client, error) {
+	switch {
+	case t.ca == "" && t.cert == "" && t.key == "":
+		log.Printf("warning: connecting to %s without TLS", addr)
+		return transport.NewClient(ctx, addr)
+	case t.ca == "" || t.cert == "" || t.key == "":
+		return nil, fmt.Errorf("mTLS needs all of --tls-ca, --tls-cert and --tls-key")
+	}
+	creds, err := transport.ClientCredentials(t.ca, t.cert, t.key, t.serverName)
+	if err != nil {
+		return nil, err
+	}
+	return transport.NewClient(ctx, addr, creds)
 }

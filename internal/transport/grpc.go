@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/RyanJHamby/distributed-gpu-training-flight-recorder/api/proto"
@@ -38,8 +39,13 @@ type Server struct {
 
 // NewServer returns a server; handler may be nil for a server that only
 // counts events (used by tests of the transport itself).
-func NewServer(listenAddr string, handler Handler) *Server {
-	s := &Server{listenAddr: listenAddr, grpcServer: grpc.NewServer(), handler: handler}
+// Pass ServerCredentials to serve mutual TLS; with none the server is plaintext.
+func NewServer(listenAddr string, handler Handler, creds ...credentials.TransportCredentials) *Server {
+	var opts []grpc.ServerOption
+	if len(creds) > 0 {
+		opts = append(opts, grpc.Creds(creds[0]))
+	}
+	s := &Server{listenAddr: listenAddr, grpcServer: grpc.NewServer(opts...), handler: handler}
 	pb.RegisterEventStreamServer(s.grpcServer, s)
 	pb.RegisterAnomalyReportServer(s.grpcServer, s)
 	return s
@@ -123,9 +129,14 @@ type Client struct {
 }
 
 // NewClient dials lazily (grpc.NewClient does not connect until first use).
-// Plaintext: development only; production would use mTLS credentials.
-func NewClient(_ context.Context, coordinatorAddr string) (*Client, error) {
-	conn, err := grpc.NewClient(coordinatorAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+// With no credentials the connection is plaintext (development only); pass
+// ClientCredentials for mutual TLS.
+func NewClient(_ context.Context, coordinatorAddr string, creds ...credentials.TransportCredentials) (*Client, error) {
+	tc := credentials.TransportCredentials(insecure.NewCredentials())
+	if len(creds) > 0 {
+		tc = creds[0]
+	}
+	conn, err := grpc.NewClient(coordinatorAddr, grpc.WithTransportCredentials(tc))
 	if err != nil {
 		return nil, err
 	}
