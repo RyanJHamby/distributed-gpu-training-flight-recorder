@@ -1,4 +1,4 @@
-.PHONY: build test lint proto docker-build run-agent run-coordinator clean
+.PHONY: sim build test lint proto docker-build run-agent run-coordinator clean
 
 BINARY := gfr
 BUILD_DIR := bin
@@ -39,3 +39,7 @@ run-coordinator: build
 # Clean build artifacts
 clean:
 	rm -rf $(BUILD_DIR)
+
+# Regenerate the synthetic scorecard
+sim:
+	go run ./cmd/gfr-sim > docs/scorecard.md

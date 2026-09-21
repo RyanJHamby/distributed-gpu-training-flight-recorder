@@ -5,7 +5,7 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    command: ["coordinator", "--listen", ":50051", "--threshold-sigma", "2.0"]
+    command: ["coordinator", "--listen", ":50051", "--threshold-sigma", "4.0"]
     ports:
       - "50051:50051"
     networks:
