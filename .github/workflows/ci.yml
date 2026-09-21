@@ -14,6 +14,11 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race -count=1 ./...
+      - name: bench scoring tests
+        run: |
+          go build -o bin/gfr ./cmd/gfr
+          pip install pytest
+          python -m pytest -q bench/tests
   shim:
     runs-on: ubuntu-latest
     steps:
