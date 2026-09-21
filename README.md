@@ -88,6 +88,7 @@ Four decisions carry most of the design. Each has a written rationale and, where
 |---|---|
 | `thermal_throttle`, `power_throttle` | NVML throttle-reason bitmask |
 | `clock_reduced` | SM clock fell >25% vs baseline (catches locked clocks and unreported throttles) |
+| `gpu_contention` | NVML compute-process count on the GPU rose above its pre-fault baseline (silent if PIDs are hidden) |
 | `ecc_errors` | corrected / uncorrected counter increase over the window |
 | `pcie_bandwidth_drop`, `nvlink_degraded` | throughput < 50% of pre-fault baseline |
 | `memory_pressure` | sustained memory-bandwidth saturation |
@@ -113,13 +114,13 @@ Example report entry (`gfr replay --json`):
 
 | Condition | Detected | Attributed correctly | False stragglers |
 |---|---|---|---|
-| 8 fault types, 3% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
-| 8 fault types, 10% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
+| 9 fault types, 3% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
+| 9 fault types, 10% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
 | Clean runs (both noise levels) | n/a | n/a | 0 |
 
 Sensitivity of thermal-fault detection to straggler lag (3% jitter): **2% lag: 0/30. 5% lag and above: 30/30.** Below about 5% of op duration a shift is treated as noise, by design.
 
-Read these numbers with the caveats: the simulator's noise is i.i.d. Gaussian, real clusters are correlated and heavy-tailed, and each attribution rule is tested against a fault the simulator generated to trigger it. This shows the logic is sound, not that it works on hardware. The one deliberately unexplained case: a GPU shared with another process leaves no per-GPU hardware signal, so the tool locates the straggler but reports `unknown`.
+Read these numbers with the caveats: the simulator's noise is i.i.d. Gaussian, real clusters are correlated and heavy-tailed, and each attribution rule is tested against a fault the simulator generated to trigger it. This shows the logic is sound, not that it works on hardware. Two contention rows are included on purpose: with visible process counts the tool reports `gpu_contention`; with PIDs hidden (typical inside containers) it locates the straggler and reports `unknown` rather than guess.
 
 ## Scope and how this relates to other tools
 
@@ -172,14 +173,14 @@ docs/                design.md (rationale), scorecard.md (generated)
 
 - No real-hardware validation yet (see Status).
 - Detection needs at least two blocks (60 collectives) of history and a persistent fault; onset is located to about one block. Single slow steps are ignored on purpose.
-- Attribution is per-GPU. It cannot see fabric faults or another process sharing the GPU.
+- Attribution is per-GPU. It cannot see fabric faults, and it can only explain GPU sharing when NVML exposes the process list.
 - The gRPC channel is plaintext (development only); no auth or TLS yet.
 - The coordinator holds events in memory (bounded, oldest dropped) and is single-instance.
 
 ## Roadmap
 
 1. Real-GPU smoke session: confirm the flight-recorder schema, fix the shim, publish a first hardware scorecard.
-2. Per-process NVML data to explain GPU contention rather than report `unknown`.
+2. Confirm on real hardware that NVML process counts are visible in the target container setups.
 3. TLS/mTLS on the agent-coordinator channel; overlapping blocks for finer onset.
 4. Overhead measurement (step time with and without the recorder).
 

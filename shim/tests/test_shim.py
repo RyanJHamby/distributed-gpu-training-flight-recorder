@@ -43,6 +43,7 @@ class FakeNVML:
     def nvmlDeviceGetClockInfo(self, h, c): return 1500
     def nvmlDeviceGetCurrentClocksThrottleReasons(self, h): return 0x40
     def nvmlDeviceGetPcieThroughput(self, h, k): return 2_000_000
+    def nvmlDeviceGetComputeRunningProcesses(self, h): return [object(), object()]
     def nvmlDeviceGetTotalEccErrors(self, h, t, v): raise RuntimeError("not supported")  # consumer GPU
 
 
@@ -53,6 +54,7 @@ def test_sampler_units_and_independent_degradation():
     assert m["type"] == "gpu_metric" and e["gpu_uuid"] == "GPU-abc"
     assert e["power_watts"] == 250.0 and e["throttle_reasons"] == 0x40 and e["sm_clock_mhz"] == 1500.0
     assert e["ecc_errors_sbe"] == 0 and e["ecc_errors_dbe"] == 0  # unsupported -> 0, others still read
+    assert e["compute_procs"] == 2
     assert p["event"]["read_bw_mbs"] == 2000.0  # KB/s -> MB/s
 
 
@@ -68,3 +70,10 @@ def test_recorder_writes_jsonl_and_survives_bad_dump(tmp_path):
     lines = [json.loads(l) for l in open(r.path)]
     assert {l["type"] for l in lines} == {"nccl_collective", "gpu_metric", "pcie_bandwidth"}
     assert all(l["event"]["rank"] == 2 for l in lines)
+
+
+def test_unsupported_process_list_reports_unknown_not_zero_processes():
+    class NoProcs(FakeNVML):
+        def nvmlDeviceGetComputeRunningProcesses(self, h): raise RuntimeError("not permitted")
+    m, _ = g.NVMLSampler(0, nvml=NoProcs()).sample(0, "n")
+    assert m["event"]["compute_procs"] == 0

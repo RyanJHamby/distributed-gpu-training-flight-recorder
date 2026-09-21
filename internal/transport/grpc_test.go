@@ -16,7 +16,7 @@ import (
 func TestProtoRoundTrip(t *testing.T) {
 	b := types.BaseEvent{Timestamp: 5, RankID: 2, NodeID: "n0", GPUUUID: "GPU-x"}
 	for _, in := range []types.Event{
-		types.GPUMetricEvent{BaseEvent: b, Temperature: 70, ECCErrorsDBE: 1, SMClockMHz: 1100, ThrottleReasons: 0x40},
+		types.GPUMetricEvent{BaseEvent: b, Temperature: 70, ECCErrorsDBE: 1, SMClockMHz: 1100, ThrottleReasons: 0x40, ComputeProcs: 2},
 		types.NCCLCollectiveEvent{BaseEvent: b, PGID: "pg0", SeqID: 9, Step: 3, OpType: "AllReduce", DurationNs: 42, Algorithm: "ring"},
 		types.PCIeBandwidthEvent{BaseEvent: b, ReadBandwidthMBs: 1.5, WriteBandwidthMBs: 2},
 		types.NVLinkEvent{BaseEvent: b, LinkID: 3, ThroughputGB: 7},

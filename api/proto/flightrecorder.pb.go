@@ -194,6 +194,7 @@ type GPUMetric struct {
 	EccErrorsDbe    uint64                 `protobuf:"varint,6,opt,name=ecc_errors_dbe,json=eccErrorsDbe,proto3" json:"ecc_errors_dbe,omitempty"`
 	SmClockMhz      float64                `protobuf:"fixed64,7,opt,name=sm_clock_mhz,json=smClockMhz,proto3" json:"sm_clock_mhz,omitempty"`
 	ThrottleReasons uint64                 `protobuf:"varint,8,opt,name=throttle_reasons,json=throttleReasons,proto3" json:"throttle_reasons,omitempty"`
+	ComputeProcs    int32                  `protobuf:"varint,9,opt,name=compute_procs,json=computeProcs,proto3" json:"compute_procs,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -280,6 +281,13 @@ func (x *GPUMetric) GetSmClockMhz() float64 {
 func (x *GPUMetric) GetThrottleReasons() uint64 {
 	if x != nil {
 		return x.ThrottleReasons
+	}
+	return 0
+}
+
+func (x *GPUMetric) GetComputeProcs() int32 {
+	if x != nil {
+		return x.ComputeProcs
 	}
 	return 0
 }
@@ -850,7 +858,7 @@ const file_api_proto_flightrecorder_proto_rawDesc = "" +
 	"\x0epcie_bandwidth\x18\f \x01(\v2\x1d.flightrecorder.PCIeBandwidthH\x00R\rpcieBandwidth\x120\n" +
 	"\x06nvlink\x18\r \x01(\v2\x16.flightrecorder.NVLinkH\x00R\x06nvlink\x123\n" +
 	"\athermal\x18\x0e \x01(\v2\x17.flightrecorder.ThermalH\x00R\athermalB\a\n" +
-	"\x05event\"\xbf\x02\n" +
+	"\x05event\"\xe4\x02\n" +
 	"\tGPUMetric\x12#\n" +
 	"\rtemperature_c\x18\x01 \x01(\x01R\ftemperatureC\x12\x1f\n" +
 	"\vpower_watts\x18\x02 \x01(\x01R\n" +
@@ -861,7 +869,8 @@ const file_api_proto_flightrecorder_proto_rawDesc = "" +
 	"\x0eecc_errors_dbe\x18\x06 \x01(\x04R\feccErrorsDbe\x12 \n" +
 	"\fsm_clock_mhz\x18\a \x01(\x01R\n" +
 	"smClockMhz\x12)\n" +
-	"\x10throttle_reasons\x18\b \x01(\x04R\x0fthrottleReasons\"\xc5\x01\n" +
+	"\x10throttle_reasons\x18\b \x01(\x04R\x0fthrottleReasons\x12#\n" +
+	"\rcompute_procs\x18\t \x01(\x05R\fcomputeProcs\"\xc5\x01\n" +
 	"\x0eNCCLCollective\x12\x13\n" +
 	"\x05pg_id\x18\x05 \x01(\tR\x04pgId\x12\x15\n" +
 	"\x06seq_id\x18\x06 \x01(\x04R\x05seqId\x12\x12\n" +

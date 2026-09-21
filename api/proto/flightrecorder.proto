@@ -42,6 +42,7 @@ message GPUMetric {
   uint64 ecc_errors_dbe = 6;
   double sm_clock_mhz = 7;
   uint64 throttle_reasons = 8;
+  int32 compute_procs = 9;
 }
 
 message NCCLCollective {

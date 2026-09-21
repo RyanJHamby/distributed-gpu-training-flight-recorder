@@ -19,6 +19,7 @@ const (
 	CauseNVLinkDegraded  CauseType = "nvlink_degraded"
 	CauseMemoryPressure  CauseType = "memory_pressure"
 	CauseClockReduced    CauseType = "clock_reduced"
+	CauseContention      CauseType = "gpu_contention"
 	CauseHostStall       CauseType = "host_stall"
 	CauseUnknown         CauseType = "unknown"
 )
@@ -79,9 +80,9 @@ func (e *Engine) Attribute(anomaly correlator.Anomaly, rankEvents []types.Event)
 
 	res := Attribution{Anomaly: anomaly}
 	rules := []func([]types.Event, []types.Event) (CausalLink, bool, bool){
-		ruleThermal, rulePower, ruleClock, ruleECC, rulePCIe, ruleNVLink, ruleMemory, ruleHostStall,
+		ruleThermal, rulePower, ruleClock, ruleContention, ruleECC, rulePCIe, ruleNVLink, ruleMemory, ruleHostStall,
 	}
-	names := []CauseType{CauseThermalThrottle, CausePowerThrottle, CauseClockReduced, CauseECCErrors,
+	names := []CauseType{CauseThermalThrottle, CausePowerThrottle, CauseClockReduced, CauseContention, CauseECCErrors,
 		CausePCIeBandwidth, CauseNVLinkDegraded, CauseMemoryPressure, CauseHostStall}
 	for i, r := range rules {
 		link, fired, hadData := r(during, before)
@@ -195,6 +196,31 @@ func ruleClock(during, before []types.Event) (CausalLink, bool, bool) {
 	drop := 1 - dm/bm
 	return CausalLink{CauseClockReduced, ev, min(0.4+drop/2, 0.7),
 		fmt.Sprintf("SM clock fell %.0f%% vs baseline (%.0f -> %.0f MHz)", drop*100, bm, dm)}, true, true
+}
+
+// ruleContention: another process started using the GPU. Needs a baseline
+// process count (>0) from before the window; a count of 0 means NVML could not
+// tell (unsupported or PIDs hidden), so the rule stays silent rather than guess.
+func ruleContention(during, before []types.Event) (CausalLink, bool, bool) {
+	procs := func(evs []types.Event) (v []float64, last types.Event) {
+		for _, e := range evs {
+			if m, ok := e.(types.GPUMetricEvent); ok && m.ComputeProcs > 0 {
+				v, last = append(v, float64(m.ComputeProcs)), e
+			}
+		}
+		return
+	}
+	d, ev := procs(during)
+	b, _ := procs(before)
+	if len(d) == 0 || len(b) == 0 {
+		return CausalLink{}, false, false
+	}
+	dm, bm := correlator.ComputeStats(d).Median, correlator.ComputeStats(b).Median
+	if dm <= bm {
+		return CausalLink{}, false, true
+	}
+	return CausalLink{CauseContention, ev, 0.7,
+		fmt.Sprintf("compute processes on this GPU rose from %.0f to %.0f", bm, dm)}, true, true
 }
 
 // ruleECC fires on any counter increase across the window; DBE is stronger.

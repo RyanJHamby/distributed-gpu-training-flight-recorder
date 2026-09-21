@@ -112,7 +112,9 @@ class NVMLSampler:
             ecc_errors_dbe=int(self._try(lambda: n.nvmlDeviceGetTotalEccErrors(
                 h, n.NVML_MEMORY_ERROR_TYPE_UNCORRECTED, n.NVML_VOLATILE_ECC))),
             sm_clock_mhz=float(self._try(lambda: n.nvmlDeviceGetClockInfo(h, n.NVML_CLOCK_SM))),
-            throttle_reasons=int(self._try(lambda: reasons_fn(h)) if reasons_fn else 0))
+            throttle_reasons=int(self._try(lambda: reasons_fn(h)) if reasons_fn else 0),
+            # 0 = unknown (unsupported, or a container hides other PIDs), never "no processes".
+            compute_procs=len(self._try(lambda: n.nvmlDeviceGetComputeRunningProcesses(h), [])))
         # NVML reports PCIe throughput in KB/s.
         rx = self._try(lambda: n.nvmlDeviceGetPcieThroughput(h, n.NVML_PCIE_UTIL_RX_BYTES), None)
         tx = self._try(lambda: n.nvmlDeviceGetPcieThroughput(h, n.NVML_PCIE_UTIL_TX_BYTES), None)
