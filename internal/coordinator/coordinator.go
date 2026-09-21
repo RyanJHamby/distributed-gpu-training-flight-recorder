@@ -3,6 +3,7 @@ package coordinator
 
 import (
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/attribution"
@@ -53,4 +54,36 @@ func Analyze(events []types.Event, o Options) Report {
 		rep.Attributions = append(rep.Attributions, eng.Attribute(a, c.EventsForRank(a.StragglerRank, 0)))
 	}
 	return rep
+}
+
+// Live accumulates streamed events and analyses them on demand. It satisfies
+// transport.Handler. Memory is bounded by MaxEvents (oldest dropped).
+type Live struct {
+	mu        sync.Mutex
+	opts      Options
+	maxEvents int
+	events    []types.Event
+}
+
+func NewLive(o Options, maxEvents int) *Live {
+	if maxEvents <= 0 {
+		maxEvents = 2_000_000
+	}
+	return &Live{opts: o, maxEvents: maxEvents}
+}
+
+func (l *Live) Ingest(e types.Event) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.events = append(l.events, e)
+	if len(l.events) > l.maxEvents {
+		l.events = append([]types.Event(nil), l.events[len(l.events)-l.maxEvents:]...)
+	}
+}
+
+func (l *Live) Report() []attribution.Attribution {
+	l.mu.Lock()
+	snap := append([]types.Event(nil), l.events...)
+	l.mu.Unlock()
+	return Analyze(snap, l.opts).Attributions
 }
