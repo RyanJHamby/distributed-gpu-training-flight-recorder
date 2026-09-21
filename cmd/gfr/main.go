@@ -9,9 +9,13 @@ import (
 	"syscall"
 	"time"
 
+	"encoding/json"
+
 	"github.com/spf13/cobra"
 
 	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/agent"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/coordinator"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/trace"
 	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
@@ -23,6 +27,7 @@ func main() {
 
 	rootCmd.AddCommand(agentCmd())
 	rootCmd.AddCommand(coordinatorCmd())
+	rootCmd.AddCommand(replayCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -101,5 +106,45 @@ func coordinatorCmd() *cobra.Command {
 	cmd.Flags().StringVar(&listenAddr, "listen", ":50051", "gRPC listen address")
 	cmd.Flags().Float64Var(&thresholdSigma, "threshold-sigma", 2.0, "Anomaly threshold (standard deviations)")
 
+	return cmd
+}
+
+func replayCmd() *cobra.Command {
+	var (
+		thresholdSigma float64
+		attrWindow     time.Duration
+		asJSON         bool
+	)
+	cmd := &cobra.Command{
+		Use:   "replay <trace.jsonl>",
+		Short: "Analyse a recorded JSONL trace offline (no GPU needed)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			f, err := os.Open(args[0])
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			events, err := trace.Read(f)
+			if err != nil {
+				return fmt.Errorf("reading %s: %w", args[0], err)
+			}
+			rep := coordinator.Analyze(events, coordinator.Options{
+				ThresholdSigma: thresholdSigma, AttributionWindow: attrWindow})
+			if asJSON {
+				enc := json.NewEncoder(cmd.OutOrStdout())
+				enc.SetIndent("", "  ")
+				return enc.Encode(rep)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%d events, %d ranks, %d anomalies\n", rep.Events, len(rep.Ranks), len(rep.Attributions))
+			for _, a := range rep.Attributions {
+				fmt.Fprintln(cmd.OutOrStdout(), "  "+a.Summary)
+			}
+			return nil
+		},
+	}
+	cmd.Flags().Float64Var(&thresholdSigma, "threshold-sigma", 4, "Robust-z threshold per collective")
+	cmd.Flags().DurationVar(&attrWindow, "attribution-window", 5*time.Second, "Look-back before the first flagged collective")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "Emit the full report as JSON")
 	return cmd
 }
