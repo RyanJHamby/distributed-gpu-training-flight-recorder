@@ -3,7 +3,7 @@ package buffer
 import (
 	"sync/atomic"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 // RingBuffer is a lock-free SPSC ring buffer for per-rank event storage.

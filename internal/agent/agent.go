@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/buffer"
-	"github.com/ryanhamby/gpu-flight-recorder/internal/collector"
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/buffer"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/collector"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 // Agent is the per-node daemon that manages collectors, ring buffers,

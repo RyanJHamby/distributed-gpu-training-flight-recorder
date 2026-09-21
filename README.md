@@ -1,8 +1,5 @@
 # GPU Flight Recorder
 
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Go](https://img.shields.io/badge/go-1.22+-blue)]()
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)]()
 
 A distributed training observability tool that attaches to GPU nodes, records system-level events in a ring buffer, and when anomalies occur, correlates timelines across ranks to produce automatic root-cause attribution.
 

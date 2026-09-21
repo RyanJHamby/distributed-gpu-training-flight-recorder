@@ -1,8 +1,8 @@
 package attribution
 
 import (
-	"github.com/ryanhamby/gpu-flight-recorder/internal/correlator"
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/correlator"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 type CauseType string

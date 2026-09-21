@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 // Anomaly represents a detected straggler in a collective operation.

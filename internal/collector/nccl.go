@@ -3,7 +3,7 @@ package collector
 import (
 	"context"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 // NCCLCollector captures NCCL collective timing by parsing NCCL_DEBUG=TRACE output.

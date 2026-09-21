@@ -3,7 +3,7 @@ package agent
 import (
 	"testing"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 func TestNewAgent(t *testing.T) {

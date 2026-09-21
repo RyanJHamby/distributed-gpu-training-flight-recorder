@@ -3,7 +3,7 @@ package buffer
 import (
 	"testing"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 func makeEvent(ts int64, rank uint32) types.Event {

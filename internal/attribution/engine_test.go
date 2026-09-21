@@ -3,7 +3,7 @@ package attribution
 import (
 	"testing"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/correlator"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/correlator"
 )
 
 func TestNewEngine(t *testing.T) {

@@ -3,7 +3,7 @@ package collector
 import (
 	"context"
 
-	"github.com/ryanhamby/gpu-flight-recorder/internal/types"
+	"github.com/RyanJHamby/distributed-gpu-training-flight-recorder/internal/types"
 )
 
 // SystemCollector collects PCIe bandwidth, NVLink throughput, and thermal state.

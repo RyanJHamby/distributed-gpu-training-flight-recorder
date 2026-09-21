@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package flightrecorder;
 
-option go_package = "github.com/ryanhamby/gpu-flight-recorder/api/proto";
+option go_package = "github.com/RyanJHamby/distributed-gpu-training-flight-recorder/api/proto";
 
 // EventStream service — agents stream events to the coordinator.
 service EventStream {
