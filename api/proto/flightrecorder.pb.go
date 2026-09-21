@@ -670,8 +670,7 @@ type AnomalyDetail struct {
 	DetectedAtNs       int64                  `protobuf:"varint,1,opt,name=detected_at_ns,json=detectedAtNs,proto3" json:"detected_at_ns,omitempty"`
 	StragglerRank      uint32                 `protobuf:"varint,2,opt,name=straggler_rank,json=stragglerRank,proto3" json:"straggler_rank,omitempty"`
 	OpType             string                 `protobuf:"bytes,3,opt,name=op_type,json=opType,proto3" json:"op_type,omitempty"`
-	ExpectedDurationNs int64                  `protobuf:"varint,4,opt,name=expected_duration_ns,json=expectedDurationNs,proto3" json:"expected_duration_ns,omitempty"`
-	ActualDurationNs   int64                  `protobuf:"varint,5,opt,name=actual_duration_ns,json=actualDurationNs,proto3" json:"actual_duration_ns,omitempty"`
+	LagNs              int64                  `protobuf:"varint,5,opt,name=lag_ns,json=lagNs,proto3" json:"lag_ns,omitempty"` // median excess lag over peers in flagged blocks (same field number as before)
 	DeviationSigma     float64                `protobuf:"fixed64,6,opt,name=deviation_sigma,json=deviationSigma,proto3" json:"deviation_sigma,omitempty"`
 	AttributionSummary string                 `protobuf:"bytes,7,opt,name=attribution_summary,json=attributionSummary,proto3" json:"attribution_summary,omitempty"`
 	Hits               int64                  `protobuf:"varint,9,opt,name=hits,proto3" json:"hits,omitempty"`
@@ -732,16 +731,9 @@ func (x *AnomalyDetail) GetOpType() string {
 	return ""
 }
 
-func (x *AnomalyDetail) GetExpectedDurationNs() int64 {
+func (x *AnomalyDetail) GetLagNs() int64 {
 	if x != nil {
-		return x.ExpectedDurationNs
-	}
-	return 0
-}
-
-func (x *AnomalyDetail) GetActualDurationNs() int64 {
-	if x != nil {
-		return x.ActualDurationNs
+		return x.LagNs
 	}
 	return 0
 }
@@ -894,19 +886,18 @@ const file_api_proto_flightrecorder_proto_rawDesc = "" +
 	"\rReportRequest\x12\x1b\n" +
 	"\twindow_ns\x18\x01 \x01(\x03R\bwindowNs\"M\n" +
 	"\x0eReportResponse\x12;\n" +
-	"\tanomalies\x18\x01 \x03(\v2\x1d.flightrecorder.AnomalyDetailR\tanomalies\"\x9a\x03\n" +
+	"\tanomalies\x18\x01 \x03(\v2\x1d.flightrecorder.AnomalyDetailR\tanomalies\"\xd7\x02\n" +
 	"\rAnomalyDetail\x12$\n" +
 	"\x0edetected_at_ns\x18\x01 \x01(\x03R\fdetectedAtNs\x12%\n" +
 	"\x0estraggler_rank\x18\x02 \x01(\rR\rstragglerRank\x12\x17\n" +
-	"\aop_type\x18\x03 \x01(\tR\x06opType\x120\n" +
-	"\x14expected_duration_ns\x18\x04 \x01(\x03R\x12expectedDurationNs\x12,\n" +
-	"\x12actual_duration_ns\x18\x05 \x01(\x03R\x10actualDurationNs\x12'\n" +
+	"\aop_type\x18\x03 \x01(\tR\x06opType\x12\x15\n" +
+	"\x06lag_ns\x18\x05 \x01(\x03R\x05lagNs\x12'\n" +
 	"\x0fdeviation_sigma\x18\x06 \x01(\x01R\x0edeviationSigma\x12/\n" +
 	"\x13attribution_summary\x18\a \x01(\tR\x12attributionSummary\x12\x12\n" +
 	"\x04hits\x18\t \x01(\x03R\x04hits\x12\x16\n" +
 	"\x06groups\x18\n" +
 	" \x01(\x03R\x06groups\x12=\n" +
-	"\fcausal_chain\x18\b \x03(\v2\x1a.flightrecorder.CausalLinkR\vcausalChain\"Z\n" +
+	"\fcausal_chain\x18\b \x03(\v2\x1a.flightrecorder.CausalLinkR\vcausalChainJ\x04\b\x04\x10\x05\"Z\n" +
 	"\n" +
 	"CausalLink\x12\x14\n" +
 	"\x05cause\x18\x01 \x01(\tR\x05cause\x12\x1e\n" +

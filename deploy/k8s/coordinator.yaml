@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: gfr-coordinator, namespace: gpu-monitoring, labels: {app: gfr-coordinator}}
+spec:
+  replicas: 1   # stateful in-memory analysis: do not scale out
+  selector: {matchLabels: {app: gfr-coordinator}}
+  template:
+    metadata: {labels: {app: gfr-coordinator}}
+    spec:
+      containers:
+        - name: coordinator
+          image: gpu-flight-recorder:latest
+          args: ["coordinator", "--listen", ":50051"]
+          ports: [{containerPort: 50051}]
+          resources: {requests: {cpu: 200m, memory: 512Mi}, limits: {memory: 2Gi}}
+          securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, readOnlyRootFilesystem: true}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: gfr-coordinator, namespace: gpu-monitoring}
+spec:
+  selector: {app: gfr-coordinator}
+  ports: [{port: 50051, targetPort: 50051}]

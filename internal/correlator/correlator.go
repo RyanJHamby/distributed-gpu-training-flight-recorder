@@ -15,18 +15,17 @@ import (
 // The signal is skew-free. In a synchronising collective the last rank to
 // arrive sees the shortest duration and the earliest arrivals the longest, so
 // lag = max(duration in group) - own duration needs no cross-node clock
-// alignment. The "duration" fields below hold lags, not raw op durations.
+// alignment. LagNs is that lag, not a raw op duration.
 type Anomaly struct {
-	DetectedAt         int64   `json:"detected_at_ns"` // timestamp of the latest flagged collective
-	StragglerRank      uint32  `json:"straggler_rank"`
-	OpType             string  `json:"op_type"`
-	ExpectedDurationNs int64   `json:"expected_lag_ns"` // unused (0); kept for report compatibility
-	ActualDurationNs   int64   `json:"actual_lag_ns"`   // median excess lag over peers in flagged blocks
-	DeviationSigma     float64 `json:"deviation_sigma"` // median z of the flagged blocks
-	Hits               int     `json:"hits"`            // collectives inside flagged blocks
-	Groups             int     `json:"groups"`          // complete collectives since the fault onset
-	StartNs            int64   `json:"start_ns"`        // first flagged collective
-	EndNs              int64   `json:"end_ns"`          // last flagged collective
+	DetectedAt     int64   `json:"detected_at_ns"` // timestamp of the latest flagged collective
+	StragglerRank  uint32  `json:"straggler_rank"`
+	OpType         string  `json:"op_type"`
+	LagNs          int64   `json:"lag_ns"`          // median excess lag over peers in flagged blocks
+	DeviationSigma float64 `json:"deviation_sigma"` // median z of the flagged blocks
+	Hits           int     `json:"hits"`            // collectives inside flagged blocks
+	Groups         int     `json:"groups"`          // collectives spanned from first to last flagged block
+	StartNs        int64   `json:"start_ns"`        // first flagged collective
+	EndNs          int64   `json:"end_ns"`          // last flagged collective
 }
 
 // Config tunes detection.
@@ -36,7 +35,7 @@ type Config struct {
 	MinRanks       int           // a collective needs this many ranks to be scored
 	BlockSize      int           // collectives per statistical block
 	MinHits        int           // persistence: minimum flagged blocks
-	MinHitFraction float64       // persistence: flagged blocks / blocks since first flagged
+	MinHitFraction float64       // persistence: flagged blocks / blocks between first and last flagged
 	JitterFloor    float64       // spread floor as a fraction of median op duration
 }
 
@@ -149,8 +148,8 @@ type gInfo struct {
 // robustly, excluding the rank under test so a straggler cannot inflate its
 // own baseline). Evidence therefore accumulates over a block instead of
 // hinging on any single collective. A rank is reported when it is flagged in
-// at least MinHits blocks and in MinHitFraction of the blocks since its first
-// flagged one. Event time, not wall clock, drives windows, so replays behave
+// at least MinHits blocks and in MinHitFraction of the blocks between its first
+// and last flagged one (so a fault that has ended is still reported). Event time, not wall clock, drives windows, so replays behave
 // like live runs.
 func (c *Correlator) DetectAnomalies(window time.Duration) []Anomaly {
 	c.mu.RLock()
@@ -240,8 +239,9 @@ func (c *Correlator) DetectAnomalies(window time.Duration) []Anomaly {
 
 	var out []Anomaly
 	for r, fl := range flags {
-		first := fl[0].block
-		if len(fl) < c.cfg.MinHits || float64(len(fl))/float64(nBlocks-first) < c.cfg.MinHitFraction {
+		first, last := fl[0].block, fl[len(fl)-1].block
+		span := last - first + 1 // judged over the fault's own extent, so a recovered fault is still reported
+		if len(fl) < c.cfg.MinHits || float64(len(fl))/float64(span) < c.cfg.MinHitFraction {
 			continue
 		}
 		lags := make([]float64, len(fl))
@@ -251,18 +251,16 @@ func (c *Correlator) DetectAnomalies(window time.Duration) []Anomaly {
 			lags[i], zs[i] = f.lag, f.z
 			ops[f.op]++
 		}
-		last := fl[len(fl)-1].block
 		out = append(out, Anomaly{
-			DetectedAt:         gs[(last+1)*bs-1].ts,
-			StragglerRank:      r,
-			OpType:             modeKey(ops),
-			ExpectedDurationNs: 0,
-			ActualDurationNs:   int64(ComputeStats(lags).Median),
-			DeviationSigma:     ComputeStats(zs).Median,
-			Hits:               len(fl) * bs,
-			Groups:             (nBlocks - first) * bs,
-			StartNs:            gs[first*bs].ts,
-			EndNs:              gs[(last+1)*bs-1].ts,
+			DetectedAt:     gs[(last+1)*bs-1].ts,
+			StragglerRank:  r,
+			OpType:         modeKey(ops),
+			LagNs:          int64(ComputeStats(lags).Median),
+			DeviationSigma: ComputeStats(zs).Median,
+			Hits:           len(fl) * bs,
+			Groups:         span * bs,
+			StartNs:        gs[first*bs].ts,
+			EndNs:          gs[(last+1)*bs-1].ts,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].DeviationSigma > out[j].DeviationSigma })

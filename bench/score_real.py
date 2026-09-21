@@ -32,8 +32,10 @@ def score(run_dir: str, gfr: str) -> dict:
         os.path.join(run_dir, "truth.json")) else {"mode": "clean", "expected_causes": []}
     merged = merge(run_dir)
     try:
-        rep = json.loads(subprocess.run([gfr, "replay", merged, "--json"], capture_output=True,
-                                        text=True, check=True).stdout)
+        p = subprocess.run([gfr, "replay", merged, "--json"], capture_output=True, text=True)
+        if p.returncode != 0:
+            sys.exit(f"gfr replay failed ({p.returncode}) on {run_dir}: {p.stderr.strip() or p.stdout.strip()}")
+        rep = json.loads(p.stdout)
     finally:
         os.unlink(merged)
     attrs = rep["attributions"]

@@ -5,7 +5,7 @@ set -euo pipefail
 echo "Setting up dev environment..."
 
 if ! command -v go &> /dev/null; then
-    echo "Go not found. Install Go 1.22+ from https://go.dev/dl/"
+    echo "Go not found. Install Go 1.25+ from https://go.dev/dl/"
     exit 1
 fi
 

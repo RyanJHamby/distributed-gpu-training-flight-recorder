@@ -10,7 +10,7 @@ import (
 const sec = int64(1e9)
 
 var anom = correlator.Anomaly{StragglerRank: 3, OpType: "AllReduce", Hits: 40, Groups: 50,
-	ActualDurationNs: 3e6, StartNs: 100 * sec, EndNs: 110 * sec}
+	LagNs: 3e6, StartNs: 100 * sec, EndNs: 110 * sec}
 
 func gpu(ts int64, mut func(*types.GPUMetricEvent)) types.Event {
 	m := types.GPUMetricEvent{BaseEvent: types.BaseEvent{Timestamp: ts, RankID: 3}, Utilization: 95, MemBandwidth: 50}

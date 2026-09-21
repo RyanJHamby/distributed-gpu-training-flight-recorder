@@ -49,8 +49,8 @@ func TestPersistentStragglerIdentified(t *testing.T) {
 	if len(a) != 1 || a[0].StragglerRank != 2 {
 		t.Fatalf("want rank 2 only, got %+v", a)
 	}
-	if a[0].ActualDurationNs < 2.5e6 || a[0].ActualDurationNs > 3.5e6 {
-		t.Fatalf("lag %d not ~3ms", a[0].ActualDurationNs)
+	if a[0].LagNs < 2.5e6 || a[0].LagNs > 3.5e6 {
+		t.Fatalf("lag %d not ~3ms", a[0].LagNs)
 	}
 }
 

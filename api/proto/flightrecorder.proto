@@ -86,8 +86,8 @@ message AnomalyDetail {
   int64 detected_at_ns = 1;
   uint32 straggler_rank = 2;
   string op_type = 3;
-  int64 expected_duration_ns = 4;
-  int64 actual_duration_ns = 5;
+  reserved 4;  // was expected_duration_ns; the block-median detector has no per-collective expectation
+  int64 lag_ns = 5;  // median excess lag over peers in flagged blocks (same field number as before)
   double deviation_sigma = 6;
   string attribution_summary = 7;
   int64 hits = 9;

@@ -1,4 +1,4 @@
-.PHONY: sim build test lint proto docker-build run-agent run-coordinator clean
+.PHONY: sim traces build test lint proto docker-build run-agent run-coordinator clean
 
 BINARY := gfr
 BUILD_DIR := bin
@@ -47,3 +47,7 @@ sim:
 # Static Linux binary for rented GPU boxes (scoring runs there; no Go toolchain needed)
 build-linux:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o bin/gfr-linux ./cmd/gfr
+
+# All synthetic fault traces into ./traces (gitignored); two small ones live in examples/traces
+traces:
+	go run ./cmd/gfr-sim -write-traces traces
