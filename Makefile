@@ -43,3 +43,7 @@ clean:
 # Regenerate the synthetic scorecard
 sim:
 	go run ./cmd/gfr-sim > docs/scorecard.md
+
+# Static Linux binary for rented GPU boxes (scoring runs there; no Go toolchain needed)
+build-linux:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -o bin/gfr-linux ./cmd/gfr
