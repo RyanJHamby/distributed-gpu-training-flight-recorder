@@ -82,6 +82,15 @@ func Read(r io.Reader) ([]types.Event, error) {
 	return out, sc.Err()
 }
 
+// DecodeLine decodes a single JSONL envelope line.
+func DecodeLine(b []byte) (types.Event, error) {
+	var env envelope
+	if err := json.Unmarshal(b, &env); err != nil {
+		return nil, err
+	}
+	return decode(env)
+}
+
 func decode(env envelope) (types.Event, error) {
 	var (
 		err error

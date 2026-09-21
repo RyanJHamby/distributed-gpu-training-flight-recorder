@@ -1,0 +1,4 @@
+{"type": "nccl_collective", "event": {"timestamp_ns": 1001, "rank": 1, "node_id": "node-a", "gpu_uuid": "GPU-abc", "pg_id": "0", "seq_id": 1, "op_type": "AllReduce", "data_size": 4194304, "duration_ns": 10000000}}
+{"type": "nccl_collective", "event": {"timestamp_ns": 1002, "rank": 1, "node_id": "node-a", "gpu_uuid": "GPU-abc", "pg_id": "0", "seq_id": 2, "op_type": "AllReduce", "data_size": 4194304, "duration_ns": 3500000}}
+{"type": "gpu_metric", "event": {"timestamp_ns": 1789997399193113000, "rank": 1, "node_id": "node-a", "gpu_uuid": "GPU-abc", "temperature_c": 77.0, "power_watts": 250.0, "utilization_pct": 91.0, "mem_bandwidth_pct": 40.0, "ecc_errors_sbe": 0, "ecc_errors_dbe": 0, "sm_clock_mhz": 1500.0, "throttle_reasons": 64}}
+{"type": "pcie_bandwidth", "event": {"timestamp_ns": 1789997399193113000, "rank": 1, "node_id": "node-a", "gpu_uuid": "GPU-abc", "read_bw_mbs": 2000.0, "write_bw_mbs": 2000.0}}

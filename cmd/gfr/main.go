@@ -44,6 +44,7 @@ func agentCmd() *cobra.Command {
 		pollIntervalMs  int
 		bufferSize      int
 		replayFile      string
+		tailGlob        string
 		replayRanks     []int
 	)
 
@@ -79,6 +80,9 @@ func agentCmd() *cobra.Command {
 				}
 				a.AddCollector(collector.NewReplayCollector(replayFile, ranks))
 			}
+			if tailGlob != "" {
+				a.AddCollector(collector.NewTailCollector(tailGlob, cfg.PollInterval))
+			}
 			if cfg.CoordinatorAddress != "" {
 				cl, err := transport.NewClient(ctx, cfg.CoordinatorAddress)
 				if err != nil {
@@ -96,6 +100,7 @@ func agentCmd() *cobra.Command {
 	cmd.Flags().IntVar(&pollIntervalMs, "poll-interval-ms", 100, "Metric poll interval in milliseconds")
 	cmd.Flags().IntVar(&bufferSize, "buffer-size", 1<<20, "Ring buffer capacity (events)")
 	cmd.Flags().StringVar(&replayFile, "replay", "", "Replay a JSONL trace instead of live collectors")
+	cmd.Flags().StringVar(&tailGlob, "tail", "", "Follow JSONL files matching this glob (written by shim/gfr_torch.py)")
 	cmd.Flags().IntSliceVar(&replayRanks, "ranks", nil, "With --replay: only emit these ranks")
 
 	return cmd
