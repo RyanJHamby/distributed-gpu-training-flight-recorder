@@ -6,8 +6,6 @@ bin/
 dist/
 *.exe
 
-# Generated protobuf
-*.pb.go
 
 # Environment
 .env
