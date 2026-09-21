@@ -10,6 +10,8 @@ type Event interface {
 type BaseEvent struct {
 	Timestamp int64  `json:"timestamp_ns"`
 	RankID    uint32 `json:"rank"`
+	NodeID    string `json:"node_id,omitempty"`
+	GPUUUID   string `json:"gpu_uuid,omitempty"`
 }
 
 func (b BaseEvent) TimestampNs() int64 { return b.Timestamp }
@@ -24,11 +26,17 @@ type GPUMetricEvent struct {
 	MemBandwidth float64 `json:"mem_bandwidth_pct"`
 	ECCErrorsSBE uint64  `json:"ecc_errors_sbe"`
 	ECCErrorsDBE uint64  `json:"ecc_errors_dbe"`
+	SMClockMHz   float64 `json:"sm_clock_mhz,omitempty"`
+	// ThrottleReasons is the NVML clocksThrottleReasons bitmask.
+	ThrottleReasons uint64 `json:"throttle_reasons,omitempty"`
 }
 
 // NCCLCollectiveEvent records timing for a single NCCL collective operation.
 type NCCLCollectiveEvent struct {
 	BaseEvent
+	PGID       string `json:"pg_id"`  // process group; with SeqID identifies one collective across ranks
+	SeqID      uint64 `json:"seq_id"` // per-process-group collective sequence number
+	Step       int64  `json:"step,omitempty"`
 	OpType     string `json:"op_type"` // AllReduce, AllGather, ReduceScatter, etc.
 	DataSize   uint64 `json:"data_size"`
 	DurationNs int64  `json:"duration_ns"`
