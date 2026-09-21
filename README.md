@@ -24,7 +24,8 @@ This section comes first on purpose.
 | Python shim (PyTorch NCCL flight recorder + NVML to JSONL) | Implemented and tested against fakes. **Never run against real PyTorch or NVML**; the entry field names it reads are unverified |
 | Real-GPU harness ([`bench/`](bench/README.md)) | Drafts. Only the scorer is tested (on simulator traces) |
 | Real-hardware results | **None yet.** Every accuracy number in this repo is synthetic |
-| Deploy manifests ([`deploy/`](deploy/)) | Parse-checked only; not run on Docker or Kubernetes |
+| Docker image and compose demo ([`deploy/`](deploy/)) | Built and run: 8 containerized agents stream a replayed trace to a coordinator and `gfr report` names the straggler |
+| Kubernetes manifests | Parse-checked only; never applied to a cluster |
 
 The next milestone is a budget-capped real-GPU run (runbook in `bench/README.md`). A result that disagrees with the synthetic scorecard will be published, not tuned away.
 
@@ -48,6 +49,7 @@ kill %1                                       # stop the coordinator
 
 make sim      # regenerate the scorecard (docs/scorecard.md)
 make traces   # write one synthetic trace per fault type into ./traces
+docker compose -f deploy/docker-compose.yaml up -d   # same demo, containerized; then: gfr report
 ```
 
 ## How it works
@@ -156,7 +158,7 @@ shim/                Python: PyTorch flight recorder + NVML -> JSONL, with tests
 bench/               real-GPU harness: workload, fault injector, scorer, matrix runner
 examples/traces/     two small recorded traces used in the quickstart
 testdata/shim/       fixture produced by the Python shim; pins the Python/Go contract
-deploy/              Dockerfile, compose demo, Kubernetes manifests (unrun)
+deploy/              Dockerfile, compose demo (verified), Kubernetes manifests (unrun)
 docs/                design.md (rationale), scorecard.md (generated)
 ```
 
