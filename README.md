@@ -14,10 +14,11 @@ Read this first. It is honest about what runs.
 | JSONL trace format, `gfr replay` | Implemented |
 | gRPC agent → coordinator streaming, `gfr report` | Implemented; tested with 8 agent processes on one coordinator |
 | Synthetic fault simulator and scorecard | Implemented, results below |
-| Live NVML collector, PyTorch NCCL flight-recorder shim | **Not yet implemented** |
+| Python shim: PyTorch NCCL flight recorder + NVML to JSONL; Go `--tail` collector | Implemented and tested against fakes. **Never run on real PyTorch/NVML**: field names unverified |
+| Real-GPU workload, fault injector, scorer (`bench/`) | Drafts; only the scorer is tested (on simulator traces) |
 | Validation on real GPUs | **Not yet done.** All numbers below are synthetic |
 
-Today the tool works from recorded or synthetic traces. The agent's only collector is `replay`; nothing reads a real GPU yet.
+Design rationale, including approaches that were tried and dropped, is in [docs/design.md](docs/design.md). The real-GPU runbook is [bench/README.md](bench/README.md).
 
 ## How it works
 
@@ -65,7 +66,7 @@ wait; ./bin/gfr report --coordinator localhost:50051
 
 - Synthetic noise is i.i.d. Gaussian; real clusters have correlated, heavy-tailed noise. Expect worse numbers on hardware until validated there.
 - Attribution is rule-based and per-GPU. It does not see network fabric faults or cross-node effects.
-- Detection needs at least two blocks (60 collectives) of history and a persistent fault; single slow steps are ignored on purpose.
+- Detection needs at least two blocks (60 collectives) of history and a persistent fault; single slow steps are ignored on purpose. Onset is located to about one block (30 collectives).
 - No authentication or TLS on the gRPC channel yet (development only).
 - NVIDIA only.
 
