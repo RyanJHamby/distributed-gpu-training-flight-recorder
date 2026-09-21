@@ -18,6 +18,7 @@ const (
 	CausePCIeBandwidth   CauseType = "pcie_bandwidth_drop"
 	CauseNVLinkDegraded  CauseType = "nvlink_degraded"
 	CauseMemoryPressure  CauseType = "memory_pressure"
+	CauseClockReduced    CauseType = "clock_reduced"
 	CauseHostStall       CauseType = "host_stall"
 	CauseUnknown         CauseType = "unknown"
 )
@@ -34,6 +35,7 @@ const (
 	bandwidthDropFraction = 0.5  // observed < 50% of baseline
 	memPressurePct        = 90.0 // mean memory-bandwidth utilisation
 	hostStallUtilPct      = 40.0 // mean GPU utilisation
+	clockDropFraction     = 0.75 // SM clock < 75% of baseline
 )
 
 type CausalLink struct {
@@ -77,9 +79,9 @@ func (e *Engine) Attribute(anomaly correlator.Anomaly, rankEvents []types.Event)
 
 	res := Attribution{Anomaly: anomaly}
 	rules := []func([]types.Event, []types.Event) (CausalLink, bool, bool){
-		ruleThermal, rulePower, ruleECC, rulePCIe, ruleNVLink, ruleMemory, ruleHostStall,
+		ruleThermal, rulePower, ruleClock, ruleECC, rulePCIe, ruleNVLink, ruleMemory, ruleHostStall,
 	}
-	names := []CauseType{CauseThermalThrottle, CausePowerThrottle, CauseECCErrors,
+	names := []CauseType{CauseThermalThrottle, CausePowerThrottle, CauseClockReduced, CauseECCErrors,
 		CausePCIeBandwidth, CauseNVLinkDegraded, CauseMemoryPressure, CauseHostStall}
 	for i, r := range rules {
 		link, fired, hadData := r(during, before)
@@ -167,6 +169,32 @@ func rulePower(during, _ []types.Event) (CausalLink, bool, bool) {
 	}
 	return CausalLink{CausePowerThrottle, ev, frac(hit, n),
 		fmt.Sprintf("power cap/brake active in %d/%d samples", hit, n)}, true, true
+}
+
+// ruleClock catches slowdowns that carry no throttle-reason bit (locked or
+// application clocks, or a throttle the driver does not report). It needs a
+// pre-window baseline and stays below the explicit throttle rules in confidence.
+func ruleClock(during, before []types.Event) (CausalLink, bool, bool) {
+	clocks := func(evs []types.Event) (v []float64, last types.Event) {
+		for _, e := range evs {
+			if m, ok := e.(types.GPUMetricEvent); ok && m.SMClockMHz > 0 {
+				v, last = append(v, m.SMClockMHz), e
+			}
+		}
+		return
+	}
+	d, ev := clocks(during)
+	b, _ := clocks(before)
+	if len(d) == 0 || len(b) == 0 {
+		return CausalLink{}, false, false
+	}
+	dm, bm := correlator.ComputeStats(d).Median, correlator.ComputeStats(b).Median
+	if dm >= bm*clockDropFraction {
+		return CausalLink{}, false, true
+	}
+	drop := 1 - dm/bm
+	return CausalLink{CauseClockReduced, ev, min(0.4+drop/2, 0.7),
+		fmt.Sprintf("SM clock fell %.0f%% vs baseline (%.0f -> %.0f MHz)", drop*100, bm, dm)}, true, true
 }
 
 // ruleECC fires on any counter increase across the window; DBE is stronger.

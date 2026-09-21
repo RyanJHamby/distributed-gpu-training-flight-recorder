@@ -49,6 +49,7 @@ func TestAttributeCauses(t *testing.T) {
 		{"thermal", series(func(m *types.GPUMetricEvent) { m.ThrottleReasons = throttleHWThermal }), CauseThermalThrottle},
 		{"thermal via ThermalEvent", []types.Event{types.ThermalEvent{BaseEvent: types.BaseEvent{Timestamp: 105 * sec}, ThrottleActive: true}}, CauseThermalThrottle},
 		{"power cap", series(func(m *types.GPUMetricEvent) { m.ThrottleReasons = throttleSWPowerCap }), CausePowerThrottle},
+		{"clock lock, no throttle bit", series2(func(m *types.GPUMetricEvent) { m.SMClockMHz = 900 }), CauseClockReduced},
 		{"ecc dbe", series(func(m *types.GPUMetricEvent) { m.ECCErrorsDBE = 2 }), CauseECCErrors},
 		{"pcie drop", []types.Event{pcie(50*sec, 12000), pcie(90*sec, 12000), pcie(103*sec, 3000), pcie(106*sec, 3000)}, CausePCIeBandwidth},
 		{"nvlink drop", []types.Event{nvl(50*sec, 200), nvl(90*sec, 200), nvl(103*sec, 40)}, CauseNVLinkDegraded},
@@ -126,5 +127,26 @@ func TestSummaryMentionsRankAndCause(t *testing.T) {
 	a := NewEngine(5*sec).Attribute(anom, series(func(m *types.GPUMetricEvent) { m.ThrottleReasons = throttleHWThermal }))
 	if a.Summary == "" || a.Anomaly.StragglerRank != 3 {
 		t.Fatal(a.Summary)
+	}
+}
+
+// series2 is series with an SM clock baseline, for clock-rule cases.
+func series2(mut func(*types.GPUMetricEvent)) []types.Event {
+	base := func(ts int64) types.Event { return gpu(ts, func(m *types.GPUMetricEvent) { m.SMClockMHz = 1900 }) }
+	during := func(ts int64) types.Event {
+		return gpu(ts, func(m *types.GPUMetricEvent) { m.SMClockMHz = 1900; mut(m) })
+	}
+	return []types.Event{base(50 * sec), base(90 * sec), during(101 * sec), during(105 * sec), during(109 * sec)}
+}
+
+func TestClockRuleNeedsBaselineAndStaysBelowThrottle(t *testing.T) {
+	e := NewEngine(5 * sec)
+	only := []types.Event{gpu(105*sec, func(m *types.GPUMetricEvent) { m.SMClockMHz = 300 })}
+	if top(t, e.Attribute(anom, only)) != CauseUnknown {
+		t.Fatal("clock rule fired without a baseline")
+	}
+	a := e.Attribute(anom, series2(func(m *types.GPUMetricEvent) { m.SMClockMHz = 900; m.ThrottleReasons = throttleHWThermal }))
+	if top(t, a) != CauseThermalThrottle {
+		t.Fatalf("explicit throttle should outrank clock drop: %+v", a.CausalChain)
 	}
 }
