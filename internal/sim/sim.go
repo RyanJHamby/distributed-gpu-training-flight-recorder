@@ -20,11 +20,14 @@ const (
 	PCIe       Fault = "pcie"
 	NVLink     Fault = "nvlink"
 	HostStall  Fault = "host_stall"
-	Contention Fault = "contention" // GPU shared with another process: no hardware signal
-	Compound   Fault = "thermal+ecc"
+	Contention Fault = "contention" // a second process shares the GPU (visible via NVML process count)
+	// ContentionHidden is the same fault where NVML cannot see other processes' PIDs
+	// (typical inside containers): the tool must say "unknown", not guess.
+	ContentionHidden Fault = "contention_hidden"
+	Compound         Fault = "thermal+ecc"
 )
 
-var AllFaults = []Fault{Clean, Thermal, Power, ECC, PCIe, NVLink, HostStall, Contention, Compound}
+var AllFaults = []Fault{Clean, Thermal, Power, ECC, PCIe, NVLink, HostStall, Contention, ContentionHidden, Compound}
 
 // Params controls one synthetic run.
 type Params struct {
@@ -90,9 +93,13 @@ func Generate(p Params) ([]types.Event, Truth) {
 				continue
 			}
 			isS := faulty && r == truth.Straggler
+			baseProcs := 1
+			if p.Fault == ContentionHidden {
+				baseProcs = 0 // unknown
+			}
 			m := types.GPUMetricEvent{BaseEvent: base, Temperature: 65 + rng.Float64()*3,
 				PowerWatts: 300, Utilization: 92 + rng.Float64()*4, MemBandwidth: 55 + rng.Float64()*10,
-				SMClockMHz: 1900}
+				SMClockMHz: 1900, ComputeProcs: baseProcs}
 			pcie := 12000 * (1 + rng.NormFloat64()*0.03)
 			nvl := 200 * (1 + rng.NormFloat64()*0.03)
 			if isS {
@@ -101,6 +108,8 @@ func Generate(p Params) ([]types.Event, Truth) {
 					m.ThrottleReasons, m.Temperature, m.SMClockMHz = 0x40, 88, 1100
 				case Power:
 					m.ThrottleReasons, m.SMClockMHz = 0x4, 1300
+				case Contention:
+					m.ComputeProcs = 2 // a second process shares this GPU
 				case HostStall:
 					m.Utilization = 10 + rng.Float64()*10
 				case PCIe:
@@ -138,7 +147,10 @@ func causesFor(f Fault) []attribution.CauseType {
 		return []attribution.CauseType{attribution.CauseHostStall}
 	case Compound:
 		return []attribution.CauseType{attribution.CauseThermalThrottle, attribution.CauseECCErrors}
+	case Contention:
+		return []attribution.CauseType{attribution.CauseContention}
+	case ContentionHidden:
+		return []attribution.CauseType{attribution.CauseUnknown} // located, not explained
 	}
-	// Contention leaves no per-GPU hardware signal, so "unknown" is the correct answer.
-	return []attribution.CauseType{attribution.CauseUnknown}
+	return nil
 }

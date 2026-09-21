@@ -17,7 +17,7 @@ func ToProto(e types.Event) (*pb.EventMessage, error) {
 		m.Event = &pb.EventMessage_GpuMetric{GpuMetric: &pb.GPUMetric{
 			TemperatureC: v.Temperature, PowerWatts: v.PowerWatts, UtilizationPct: v.Utilization,
 			MemBandwidthPct: v.MemBandwidth, EccErrorsSbe: v.ECCErrorsSBE, EccErrorsDbe: v.ECCErrorsDBE,
-			SmClockMhz: v.SMClockMHz, ThrottleReasons: v.ThrottleReasons}}
+			SmClockMhz: v.SMClockMHz, ThrottleReasons: v.ThrottleReasons, ComputeProcs: int32(v.ComputeProcs)}}
 	case types.NCCLCollectiveEvent:
 		set(v.BaseEvent)
 		m.Event = &pb.EventMessage_NcclCollective{NcclCollective: &pb.NCCLCollective{
@@ -48,7 +48,7 @@ func FromProto(m *pb.EventMessage) (types.Event, error) {
 		g := v.GpuMetric
 		return types.GPUMetricEvent{BaseEvent: b, Temperature: g.TemperatureC, PowerWatts: g.PowerWatts,
 			Utilization: g.UtilizationPct, MemBandwidth: g.MemBandwidthPct, ECCErrorsSBE: g.EccErrorsSbe,
-			ECCErrorsDBE: g.EccErrorsDbe, SMClockMHz: g.SmClockMhz, ThrottleReasons: g.ThrottleReasons}, nil
+			ECCErrorsDBE: g.EccErrorsDbe, SMClockMHz: g.SmClockMhz, ThrottleReasons: g.ThrottleReasons, ComputeProcs: int(g.ComputeProcs)}, nil
 	case *pb.EventMessage_NcclCollective:
 		n := v.NcclCollective
 		return types.NCCLCollectiveEvent{BaseEvent: b, PGID: n.PgId, SeqID: n.SeqId, Step: n.Step,

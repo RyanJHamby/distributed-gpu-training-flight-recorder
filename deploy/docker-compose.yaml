@@ -1,6 +1,6 @@
 # Local demo: one coordinator and eight agents, each replaying one rank of a
 # recorded run. Query from the host:  gfr report --coordinator localhost:50051
-# NOTE: parse-checked only; not run in the authoring environment.
+# Verified: builds, 8 agents exit 0, coordinator reports rank 2 / thermal_throttle.
 x-agent: &agent
   build: {context: .., dockerfile: deploy/Dockerfile}
   volumes: ["../examples/traces:/traces:ro"]

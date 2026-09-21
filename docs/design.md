@@ -32,7 +32,9 @@ Rules over the straggler's own telemetry, each returning (fired, had-data). Thre
 
 Host stall is suppressed when a hardware throttle is present: a throttled GPU that looks idle is a device problem, not a starved dataloader.
 
-Not covered: GPU sharing with another process (no per-GPU hardware signal; reported `unknown`), network fabric faults, cross-node effects.
+GPU contention is detected through the NVML compute-process count rising above its pre-fault baseline. A count of 0 means *unknown* (unsupported, or a container hides other PIDs), never "no processes", so the rule stays silent and the result is `unknown`. The simulator scores both the visible and the hidden case.
+
+Not covered: network fabric faults, cross-node effects, and contention when the process list is hidden.
 
 ## Collectors
 

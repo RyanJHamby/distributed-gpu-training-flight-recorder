@@ -24,7 +24,8 @@ This section comes first on purpose.
 | Python shim (PyTorch NCCL flight recorder + NVML to JSONL) | Implemented and tested against fakes. **Never run against real PyTorch or NVML**; the entry field names it reads are unverified |
 | Real-GPU harness ([`bench/`](bench/README.md)) | Drafts. Only the scorer is tested (on simulator traces) |
 | Real-hardware results | **None yet.** Every accuracy number in this repo is synthetic |
-| Deploy manifests ([`deploy/`](deploy/)) | Parse-checked only; not run on Docker or Kubernetes |
+| Docker image and compose demo ([`deploy/`](deploy/)) | Built and run: 8 containerized agents stream a replayed trace to a coordinator and `gfr report` names the straggler |
+| Kubernetes manifests | Parse-checked only; never applied to a cluster |
 
 The next milestone is a budget-capped real-GPU run (runbook in `bench/README.md`). A result that disagrees with the synthetic scorecard will be published, not tuned away.
 
@@ -48,6 +49,7 @@ kill %1                                       # stop the coordinator
 
 make sim      # regenerate the scorecard (docs/scorecard.md)
 make traces   # write one synthetic trace per fault type into ./traces
+docker compose -f deploy/docker-compose.yaml up -d   # same demo, containerized; then: gfr report
 ```
 
 ## How it works
@@ -88,6 +90,7 @@ Four decisions carry most of the design. Each has a written rationale and, where
 |---|---|
 | `thermal_throttle`, `power_throttle` | NVML throttle-reason bitmask |
 | `clock_reduced` | SM clock fell >25% vs baseline (catches locked clocks and unreported throttles) |
+| `gpu_contention` | NVML compute-process count on the GPU rose above its pre-fault baseline (silent if PIDs are hidden) |
 | `ecc_errors` | corrected / uncorrected counter increase over the window |
 | `pcie_bandwidth_drop`, `nvlink_degraded` | throughput < 50% of pre-fault baseline |
 | `memory_pressure` | sustained memory-bandwidth saturation |
@@ -113,13 +116,13 @@ Example report entry (`gfr replay --json`):
 
 | Condition | Detected | Attributed correctly | False stragglers |
 |---|---|---|---|
-| 8 fault types, 3% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
-| 8 fault types, 10% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
+| 9 fault types, 3% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
+| 9 fault types, 10% op jitter, 30% straggler lag | 30/30 each | 30/30 each | 0 |
 | Clean runs (both noise levels) | n/a | n/a | 0 |
 
 Sensitivity of thermal-fault detection to straggler lag (3% jitter): **2% lag: 0/30. 5% lag and above: 30/30.** Below about 5% of op duration a shift is treated as noise, by design.
 
-Read these numbers with the caveats: the simulator's noise is i.i.d. Gaussian, real clusters are correlated and heavy-tailed, and each attribution rule is tested against a fault the simulator generated to trigger it. This shows the logic is sound, not that it works on hardware. The one deliberately unexplained case: a GPU shared with another process leaves no per-GPU hardware signal, so the tool locates the straggler but reports `unknown`.
+Read these numbers with the caveats: the simulator's noise is i.i.d. Gaussian, real clusters are correlated and heavy-tailed, and each attribution rule is tested against a fault the simulator generated to trigger it. This shows the logic is sound, not that it works on hardware. Two contention rows are included on purpose: with visible process counts the tool reports `gpu_contention`; with PIDs hidden (typical inside containers) it locates the straggler and reports `unknown` rather than guess.
 
 ## Scope and how this relates to other tools
 
@@ -155,7 +158,7 @@ shim/                Python: PyTorch flight recorder + NVML -> JSONL, with tests
 bench/               real-GPU harness: workload, fault injector, scorer, matrix runner
 examples/traces/     two small recorded traces used in the quickstart
 testdata/shim/       fixture produced by the Python shim; pins the Python/Go contract
-deploy/              Dockerfile, compose demo, Kubernetes manifests (unrun)
+deploy/              Dockerfile, compose demo (verified), Kubernetes manifests (unrun)
 docs/                design.md (rationale), scorecard.md (generated)
 ```
 
@@ -172,14 +175,14 @@ docs/                design.md (rationale), scorecard.md (generated)
 
 - No real-hardware validation yet (see Status).
 - Detection needs at least two blocks (60 collectives) of history and a persistent fault; onset is located to about one block. Single slow steps are ignored on purpose.
-- Attribution is per-GPU. It cannot see fabric faults or another process sharing the GPU.
+- Attribution is per-GPU. It cannot see fabric faults, and it can only explain GPU sharing when NVML exposes the process list.
 - The gRPC channel is plaintext (development only); no auth or TLS yet.
 - The coordinator holds events in memory (bounded, oldest dropped) and is single-instance.
 
 ## Roadmap
 
 1. Real-GPU smoke session: confirm the flight-recorder schema, fix the shim, publish a first hardware scorecard.
-2. Per-process NVML data to explain GPU contention rather than report `unknown`.
+2. Confirm on real hardware that NVML process counts are visible in the target container setups.
 3. TLS/mTLS on the agent-coordinator channel; overlapping blocks for finer onset.
 4. Overhead measurement (step time with and without the recorder).
 

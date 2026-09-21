@@ -29,7 +29,7 @@ func TestShimOutputDecodes(t *testing.T) {
 			}
 		case types.GPUMetricEvent:
 			gpu++
-			if v.ThrottleReasons != 0x40 || v.PowerWatts != 250 || v.GPUUUID != "GPU-abc" {
+			if v.ThrottleReasons != 0x40 || v.PowerWatts != 250 || v.ComputeProcs != 2 || v.GPUUUID != "GPU-abc" {
 				t.Fatalf("bad gpu metric %+v", v)
 			}
 		case types.PCIeBandwidthEvent:

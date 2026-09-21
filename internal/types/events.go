@@ -29,6 +29,9 @@ type GPUMetricEvent struct {
 	SMClockMHz   float64 `json:"sm_clock_mhz,omitempty"`
 	// ThrottleReasons is the NVML clocksThrottleReasons bitmask.
 	ThrottleReasons uint64 `json:"throttle_reasons,omitempty"`
+	// ComputeProcs is the number of compute processes NVML reports on the GPU.
+	// 0 means unknown (unsupported, or PIDs hidden by a container), not "none".
+	ComputeProcs int `json:"compute_procs,omitempty"`
 }
 
 // NCCLCollectiveEvent records timing for a single NCCL collective operation.

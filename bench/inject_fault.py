@@ -14,7 +14,7 @@ EXPECTED = {  # acceptable top causes per mode; contention has no hardware signa
     "power_cap": ["power_throttle", "clock_reduced"],
     "clock_lock": ["clock_reduced"],
     "host_stall": ["host_stall"],
-    "contention": ["unknown"],
+    "contention": ["gpu_contention", "unknown"],  # unknown if the container hides other PIDs
     "clean": [],
 }
 

@@ -150,3 +150,30 @@ func TestClockRuleNeedsBaselineAndStaysBelowThrottle(t *testing.T) {
 		t.Fatalf("explicit throttle should outrank clock drop: %+v", a.CausalChain)
 	}
 }
+
+func procs(n int) func(*types.GPUMetricEvent) {
+	return func(m *types.GPUMetricEvent) { m.ComputeProcs = n }
+}
+
+func TestContentionRule(t *testing.T) {
+	e := NewEngine(5 * sec)
+	mk := func(baseline, during int) []types.Event {
+		g := func(ts int64, n int) types.Event { return gpu(ts, procs(n)) }
+		return []types.Event{g(50*sec, baseline), g(90*sec, baseline), g(101*sec, during), g(105*sec, during), g(109*sec, during)}
+	}
+	if got := top(t, e.Attribute(anom, mk(1, 2))); got != CauseContention {
+		t.Fatalf("1->2 procs: got %s", got)
+	}
+	if got := top(t, e.Attribute(anom, mk(1, 1))); got != CauseUnknown {
+		t.Fatalf("unchanged count must not fire: %s", got)
+	}
+	// PIDs hidden (0 = unknown): stay silent instead of guessing.
+	if got := top(t, e.Attribute(anom, mk(0, 0))); got != CauseUnknown {
+		t.Fatalf("hidden PIDs must not fire: %s", got)
+	}
+	// Needs a baseline.
+	only := []types.Event{gpu(105*sec, procs(3))}
+	if got := top(t, e.Attribute(anom, only)); got != CauseUnknown {
+		t.Fatalf("no baseline must not fire: %s", got)
+	}
+}
