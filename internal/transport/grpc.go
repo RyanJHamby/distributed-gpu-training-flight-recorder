@@ -103,7 +103,7 @@ func (s *Server) GetReport(_ context.Context, _ *pb.ReportRequest) (*pb.ReportRe
 	for _, a := range s.handler.Report() {
 		d := &pb.AnomalyDetail{
 			DetectedAtNs: a.Anomaly.DetectedAt, StragglerRank: a.Anomaly.StragglerRank, OpType: a.Anomaly.OpType,
-			ExpectedDurationNs: a.Anomaly.ExpectedDurationNs, ActualDurationNs: a.Anomaly.ActualDurationNs,
+			LagNs:          a.Anomaly.LagNs,
 			DeviationSigma: a.Anomaly.DeviationSigma, AttributionSummary: a.Summary,
 			Hits: int64(a.Anomaly.Hits), Groups: int64(a.Anomaly.Groups),
 		}

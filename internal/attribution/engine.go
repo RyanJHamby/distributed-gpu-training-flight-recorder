@@ -106,7 +106,7 @@ func (e *Engine) Attribute(anomaly correlator.Anomaly, rankEvents []types.Event)
 func summarize(a correlator.Anomaly, r Attribution) string {
 	top := r.CausalChain[0]
 	s := fmt.Sprintf("rank %d straggled on %s (%d/%d collectives, ~%.1fms lag): %s (confidence %.2f) - %s",
-		a.StragglerRank, a.OpType, a.Hits, a.Groups, float64(a.ActualDurationNs)/1e6,
+		a.StragglerRank, a.OpType, a.Hits, a.Groups, float64(a.LagNs)/1e6,
 		top.Cause, top.Confidence, top.Detail)
 	if len(r.CausalChain) > 1 && top.Cause != CauseUnknown {
 		var also []string

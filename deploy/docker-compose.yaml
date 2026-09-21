@@ -1,56 +1,38 @@
-version: "3.8"
+# Local demo: one coordinator and eight agents, each replaying one rank of a
+# recorded run. Query from the host:  gfr report --coordinator localhost:50051
+# NOTE: parse-checked only; not run in the authoring environment.
+x-agent: &agent
+  build: {context: .., dockerfile: deploy/Dockerfile}
+  volumes: ["../examples/traces:/traces:ro"]
+  depends_on: [coordinator]
+  restart: "no"
 
 services:
   coordinator:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    command: ["coordinator", "--listen", ":50051", "--threshold-sigma", "4.0"]
-    ports:
-      - "50051:50051"
-    networks:
-      - gfr
-
+    build: {context: .., dockerfile: deploy/Dockerfile}
+    command: ["coordinator", "--listen", ":50051"]
+    ports: ["50051:50051"]
   agent-0:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-0"]
-    depends_on:
-      - coordinator
-    networks:
-      - gfr
-
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "0"]
   agent-1:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-1"]
-    depends_on:
-      - coordinator
-    networks:
-      - gfr
-
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "1"]
   agent-2:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-2"]
-    depends_on:
-      - coordinator
-    networks:
-      - gfr
-
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "2"]
   agent-3:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-    command: ["agent", "--coordinator", "coordinator:50051", "--node-id", "agent-3"]
-    depends_on:
-      - coordinator
-    networks:
-      - gfr
-
-networks:
-  gfr:
-    driver: bridge
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "3"]
+  agent-4:
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "4"]
+  agent-5:
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "5"]
+  agent-6:
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "6"]
+  agent-7:
+    <<: *agent
+    command: ["agent", "--coordinator", "coordinator:50051", "--replay", "/traces/thermal.jsonl", "--ranks", "7"]

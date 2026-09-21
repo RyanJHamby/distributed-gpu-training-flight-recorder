@@ -21,3 +21,6 @@ vendor/
 .vscode/
 *.swp
 *.swo
+
+# Generated synthetic traces (make traces)
+/traces/

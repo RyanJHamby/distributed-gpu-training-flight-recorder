@@ -30,7 +30,7 @@ def write_truth(d, obj):
 
 def test_detects_and_attributes(tmp_path):
     d = str(tmp_path / "run")
-    split_by_rank(os.path.join(ROOT, "testdata", "thermal.jsonl"), d)
+    split_by_rank(os.path.join(ROOT, "examples", "traces", "thermal.jsonl"), d)
     write_truth(d, {"mode": "power_cap", "rank": 2, "expected_causes": ["thermal_throttle"]})
     r = score_real.score(d, GFR)
     assert r["detected"] and r["attributed"] and not r["false_positive"] and r["top_cause"] == "thermal_throttle"
@@ -38,7 +38,7 @@ def test_detects_and_attributes(tmp_path):
 
 def test_wrong_expectation_is_reported_not_hidden(tmp_path):
     d = str(tmp_path / "run")
-    split_by_rank(os.path.join(ROOT, "testdata", "thermal.jsonl"), d)
+    split_by_rank(os.path.join(ROOT, "examples", "traces", "thermal.jsonl"), d)
     write_truth(d, {"mode": "x", "rank": 5, "expected_causes": ["ecc_errors"]})
     r = score_real.score(d, GFR)
     assert not r["detected"] and r["false_positive"]  # flagged rank 2, truth said rank 5
@@ -46,6 +46,6 @@ def test_wrong_expectation_is_reported_not_hidden(tmp_path):
 
 def test_clean_run(tmp_path):
     d = str(tmp_path / "run")
-    split_by_rank(os.path.join(ROOT, "testdata", "clean.jsonl"), d)
+    split_by_rank(os.path.join(ROOT, "examples", "traces", "clean.jsonl"), d)
     r = score_real.score(d, GFR)
     assert r["mode"] == "clean" and r["false_positive"] is False
