@@ -17,6 +17,8 @@ non_goals:
 risk_tier: 1
 max_runs: 3
 autonomy: inherit
+status: ready
+issue: 7
 ---
 
 Priority suggestion: p0 among these three. README's own Status table says the entry field names are "unverified" and `bench/README.md` smoke check 1 is "fix the shim if field names are wrong". This turns that into a repeatable check, built and tested without a GPU.
@@ -42,3 +44,4 @@ CI runs plain `pytest`, so the tests are `xfail(strict=True)` and CI stays green
 
 ## Log
 - 2026-10-31 draft
+- 2026-10-31 ready, issue #7 (handshake was provisional; repo not yet onboarded with ap init; waiting for the owner's agent-ready label)

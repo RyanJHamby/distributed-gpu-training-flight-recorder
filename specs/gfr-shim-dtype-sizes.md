@@ -17,6 +17,8 @@ non_goals:
 risk_tier: 1
 max_runs: 2
 autonomy: inherit
+status: ready
+issue: 8
 ---
 
 Priority suggestion: p1. This is a real, GPU-free bug, but `data_size` is carried on the wire and never used by detection or attribution today, so no report changes. It matters when anyone starts reading it.
@@ -41,3 +43,4 @@ CI runs plain `pytest`, so the new cases that fail today are marked `xfail(stric
 
 ## Log
 - 2026-10-31 draft
+- 2026-10-31 ready, issue #8 (handshake was provisional; repo not yet onboarded with ap init; waiting for the owner's agent-ready label)
