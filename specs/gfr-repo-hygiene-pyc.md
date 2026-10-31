@@ -19,6 +19,8 @@ non_goals:
 risk_tier: 1
 max_runs: 2
 autonomy: inherit
+status: ready
+issue: 9
 ---
 
 Priority suggestion: p1 (lowest of the three; housekeeping, but it reproduces).
@@ -39,3 +41,4 @@ CI runs plain `pytest`; both tests fail today, so they are `xfail(strict=True)` 
 
 ## Log
 - 2026-10-31 draft
+- 2026-10-31 ready, issue #9 (handshake was provisional; repo not yet onboarded with ap init; waiting for the owner's agent-ready label)
